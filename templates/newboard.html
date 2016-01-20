@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="refresh" content="3;url=/{{ board }}" />
+		<link rel="stylesheet" type="text/css" href="/static/style.css" />
+		<title>{{ title }}</title>
+	</head>
+	<body>
+		<div class="header">
+			<span class="title"><a href="/">{{ title }}</a></span>
+			<span class="boardnav">{{ boardnav(board)|safe }}</span>
+		</div>
+		<div class="messages">
+			{% for category, message in get_flashed_messages(with_categories=true) %}
+			<div class="{{ category }}">{{ message }}</div>
+			{% endfor %}
+		</div>
+		<footer>
+			{{ title }} {{ info()|safe }}
+		</footer>
+	</body>
+</html>

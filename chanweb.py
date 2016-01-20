@@ -6,9 +6,9 @@ from json import load, dump
 from subprocess import check_output
 from datetime import datetime
 from ago import human
-from jinja2 import evalcontextfilter, Markup, escape
 from misaka import html
 from lxml.html.clean import clean_html
+from os import mkdir
 
 GH_URL = "https://github.com/blha303/sshchan-web"
 ROOT = "/home/blha303/sshchan/"
@@ -57,17 +57,34 @@ with open("/home/blha303/sekritkee") as f:
     app.secret_key = f.read()
 app.jinja_env.globals.update(info=get_git_describe, title="Chanweb", boardnav=get_board_nav, getform=get_form)
 
-@app.template_filter()
-@evalcontextfilter
-def nl2br(eval_ctx, value):
-    result = '\n\n'.join('<p>%s</p>' % p.replace('\n', '<br>\n')
-        for p in re.compile(r'(?:\r\n|\r|\n){2,}').split(escape(value)))
-    if eval_ctx.autoescape:
-        result = Markup(result)
-    return result
-
-@app.route('/')
+@app.route('/', methods=["GET", "POST"])
 def index():
+    if request.method == "POST":
+        global BOARDS
+        global POSTS
+        board = request.form["board"].lower() if request.form.get("board", None) else ""
+        desc = request.form["desc"] if request.form.get("desc", None) else ""
+        if not board or not board.isalpha() or len(board) > 6 or board in BOARDS:
+            flash("Invalid board name! (alphabet, 1-5 characters, unique)", "error")
+            return render_template("newboard.html", board=board)
+        if not desc or not all(x.isalpha() or x.isspace() for x in desc) or len(desc) > 30:
+            flash("Invalid description! (alphanumerical, 1-30 chars)", "error")
+            return render_template("newboard.html", board=board)
+        try:
+            mkdir(ROOT + "boards/" + board)
+        except IOError:
+            flash("Unable to create board :O", "error")
+            return render_template("newboard.html", board=board)
+        with open(ROOT + "boardlist", "w") as f:
+            BOARDS[board] = desc
+            dump(BOARDS, f)
+        with open(ROOT + "boards/" + board + "/index", "w") as f:
+            dump([], f)
+        with open(ROOT + "postnums", "w") as f:
+            POSTS[board] = 0
+            dump(POSTS, f)
+        flash("Success? :O", "success")
+        return render_template("newboard.html", board=board)
     return render_template("index.html", boards=BOARDS)
 
 @app.route('/<board>/', methods=["GET", "POST"])
@@ -153,6 +170,10 @@ def board_display(board):
         toplevel[postnum]["comments"] = comments
         toplevel[postnum]["name"] = "Anonymous"
     return render_template("board.html", posts=toplevel, board=board, desc=desc)
+
+@app.route("/.well-known/acme-challenge/sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM")
+def acme():
+    return "sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM.--3x4yUIqI4PvD8bAfmTEZ2mwq3YoGv89krhoMNnlGI"
 
 if __name__ == "__main__":
     app.run(port=56224, debug=True)
