@@ -1,18 +1,9 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>{{ title }}</title>
-	</head>
-	<body>
-		<h1>{{ title }}</h1>
-		<p>Select a board:</p>
-		<ul>
+{% extends "base.html" %}
+{% block body %}
+                <p>Select a board:</p>
+                <ul>
 {% for board, desc in boards.items() %}
-			<li><b>{{ board }}</b> ({{ desc }})</li>
+                        <li><a href="/{{ board }}/"><b>{{ board }}</b></a> ({{ desc }})</li>
 {% endfor %}
-		</ul>
-		<footer>
-			{{ title }} {{ info()|safe }}
-		</footer>
-	</body>
-</html>
+                </ul>
+{% endblock %}

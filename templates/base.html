@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="/static/style.css" />
+		<title>{{ title }}</title>
+	</head>
+	<body>
+		<div class="header">
+			<span class="title">{{ title }}</span>
+			<span class="boardnav">{{ boardnav()|safe }}</span>
+		</div>
+{% block body %}{% endblock %}
+		<footer>
+			{{ title }} {{ info()|safe }}
+		</footer>
+	</body>
+</html>

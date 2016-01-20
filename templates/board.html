@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+		<span class="boardname">/{{ board }}/</span>
+{% for num, post in posts.items() %}
+		<div class="thread" id="{{ num }}">
+			<div class="post op">
+				<div class="intro">
+					<span class="title">{{ post.title }}</span>
+					<span class="name">{{ post.name }}</span>
+					<time datetime="{{ post.time }}" title="{{ post.time }}">{{ post.ago }}</time>
+					<span class="id"><a href="#{{ post.id }}">>>{{ post.id }}</a></span>
+				</div>
+				<div class="body">
+					{{ post.body|nl2br }}
+				</div>
+			</div>
+{% for comment in post.comments %}
+			<div class="comment" id="{{ comment.id }}">
+				<div class="intro">
+					<span class="title">{{ comment.title }}</span>
+					<span class="name">{{ comment.name }}</span>
+					<time datetime="{{ comment.time }}" title="{{ comment.time }}">{{ comment.ago }}</time>
+					<span class="id"><a href="#{{ comment.id }}">>>{{ comment.id }}</a></span>
+				</div>
+				<div class="body">
+					{{ comment.body|nl2br }}
+				</div>
+			</div>
+{% endfor %}
+		</div>
+{% endfor %}
+{% endblock %}
