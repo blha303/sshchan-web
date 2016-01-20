@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{{ title }}</title>
+	</head>
+	<body>
+		<h1>{{ title }}</h1>
+		<p>Select a board:</p>
+		<dl>
+{% for board, desc in boards.items() %}
+			<dt>{{ board }}</dt>
+			<dd>{{ desc }}</dt>
+{% endfor %}
+		</dl>
+	<footer>
+		{{ title }} 
+	</body>
+</html>
