@@ -7,6 +7,7 @@ from subprocess import check_output
 from datetime import datetime
 from ago import human
 from jinja2 import evalcontextfilter, Markup, escape
+from markdown import markdown
 
 GH_URL = "https://github.com/blha303/sshchan-web"
 ROOT = "/home/blha303/sshchan/"
@@ -50,6 +51,7 @@ def get_form(board, id=None):
     return render_template("submit.html", board=board, id=id)
 
 app = Flask(__name__)
+
 with open("/home/blha303/sekritkee") as f:
     app.secret_key = f.read()
 app.jinja_env.globals.update(info=get_git_describe, title="Chanweb", boardnav=get_board_nav, getform=get_form)
@@ -81,9 +83,14 @@ def board_display(board):
     if request.method == "POST":
         global POSTS
         title = request.form["title"] if request.form.get("title", None) else ""
-#        name = request.form["name"] if request.form.get("name", None) else "Anonymous"
+        name = "Anonymous"
         body = request.form["body"] if request.form.get("body", None) else ""
+        if markdown(body, safe_mode="remove", enable_attributes="false").strip() == "<p></p>":
+            body = ""
         id = request.form["id"] if request.form.get("id", None) else ""
+        if len(body) > 1500 or len(title) > 30 or len(name) > 30:
+            flash("Too long! Want to try that again?", "error")
+            return render_template("posted.html", board=board, desc=desc)
         if not body:
             flash("No body provided! We kinda need something there, sorry.", "error")
             return render_template("posted.html", board=board, desc=desc)
@@ -115,7 +122,7 @@ def board_display(board):
         with open(ROOT + "boards/{}/index".format(board), "w") as f:
             dump(board_content, f)
         flash("Success! (?)", "success")
-        return render_template("posted.html", board=board, desc=desc)
+        return render_template("posted.html", board=board, desc=desc, id=POSTS[board])
            
 
     toplevel = {}
@@ -125,6 +132,7 @@ def board_display(board):
     for post in board_content:
         postnum,title,*c = post
         ts,postnum,body = c.pop(0)
+        body = markdown(body, safe_mode="remove", enable_attributes=False)
         toplevel[postnum] = {}
         toplevel[postnum]["id"] = postnum
         toplevel[postnum]["title"] = title
@@ -133,6 +141,7 @@ def board_display(board):
         fix_time(toplevel[postnum])
         comments = []
         for ts,id,body in c:
+            body = markdown(body, safe_mode="remove", enable_attributes=False)
             out = {}
             out["ts"] = int(ts)
             fix_time(out)

@@ -2,7 +2,7 @@
 {% block body %}
 		<div class="boardname">/{{ board }}/ - <i>{{ desc }}</i></div>
 		{{ getform(board)|safe }}
-{% for num, post in posts.items() %}
+{% for num, post in posts.items()|sort(reverse=True) %}
 		<div class="thread" id="{{ num }}">
 			<div class="post op">
 				<div class="intro">
@@ -12,7 +12,7 @@
 					<span class="id"><a href="#{{ post.id }}">>>{{ post.id }}</a></span>
 				</div>
 				<div class="body">
-					{{ post.body|nl2br }}
+					{{ post.body|safe|nl2br }}
 				</div>
 			</div>
 {% for comment in post.comments %}
@@ -24,7 +24,7 @@
 					<span class="id"><a href="#{{ comment.id }}">>>{{ comment.id }}</a></span>
 				</div>
 				<div class="body">
-					{{ comment.body|nl2br }}
+					{{ comment.body|safe|nl2br }}
 				</div>
 			</div>
 {% endfor %}
