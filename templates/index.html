@@ -6,13 +6,13 @@
 	<body>
 		<h1>{{ title }}</h1>
 		<p>Select a board:</p>
-		<dl>
+		<ul>
 {% for board, desc in boards.items() %}
-			<dt>{{ board }}</dt>
-			<dd>{{ desc }}</dt>
+			<li><b>{{ board }}</b> ({{ desc }})</li>
 {% endfor %}
-		</dl>
-	<footer>
-		{{ title }} 
+		</ul>
+		<footer>
+			{{ title }} {{ info()|safe }}
+		</footer>
 	</body>
 </html>
