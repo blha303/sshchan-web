@@ -57,3 +57,11 @@ footer {
 	bottom: 10px;
 	right: 15px;
 }
+
+blockquote p:before {
+	content: "> ";
+}
+
+blockquote p {
+	color: green;
+}

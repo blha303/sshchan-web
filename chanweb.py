@@ -7,7 +7,8 @@ from subprocess import check_output
 from datetime import datetime
 from ago import human
 from jinja2 import evalcontextfilter, Markup, escape
-from markdown import markdown
+from misaka import html
+from lxml.html.clean import clean_html
 
 GH_URL = "https://github.com/blha303/sshchan-web"
 ROOT = "/home/blha303/sshchan/"
@@ -85,7 +86,7 @@ def board_display(board):
         title = request.form["title"] if request.form.get("title", None) else ""
         name = "Anonymous"
         body = request.form["body"] if request.form.get("body", None) else ""
-        if markdown(body, safe_mode="remove", enable_attributes="false").strip() == "<p></p>":
+        if clean_html(html(body).strip()) == "<div></div>":
             body = ""
         id = request.form["id"] if request.form.get("id", None) else ""
         if len(body) > 1500 or len(title) > 30 or len(name) > 30:
@@ -123,7 +124,6 @@ def board_display(board):
             dump(board_content, f)
         flash("Success! (?)", "success")
         return render_template("posted.html", board=board, desc=desc, id=POSTS[board])
-           
 
     toplevel = {}
     def fix_time(post):
@@ -132,7 +132,8 @@ def board_display(board):
     for post in board_content:
         postnum,title,*c = post
         ts,postnum,body = c.pop(0)
-        body = markdown(body, safe_mode="remove", enable_attributes=False)
+        body = re.sub(r'>>(\d+?)', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
+        body = clean_html(html(body).strip())
         toplevel[postnum] = {}
         toplevel[postnum]["id"] = postnum
         toplevel[postnum]["title"] = title
@@ -141,7 +142,7 @@ def board_display(board):
         fix_time(toplevel[postnum])
         comments = []
         for ts,id,body in c:
-            body = markdown(body, safe_mode="remove", enable_attributes=False)
+            body = clean_html(html(body).strip())
             out = {}
             out["ts"] = int(ts)
             fix_time(out)
