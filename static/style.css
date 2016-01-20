@@ -1,14 +1,59 @@
+div.boardname {
+	font-size: x-large;
+	margin-bottom: 15px;
+}
+
 div.header span.title {
 	font-size: xx-large;
 	font-weight: bold;
+}
+
+div.header span.title a:link {
+	text-decoration: none!important;
 }
 
 div.header span.boardnav {
 	margin-left: 10px;
 }
 
+div.messages {
+	margin-top: 30px;
+	font-size: x-large;
+	font-weight: bold;
+}
+
+div.messages .error {
+	color: darkred;
+}
+
+div.messages .success {
+	color: darkgreen;
+}
+
+div.thread {
+	margin-bottom: 40px;
+}
+
+div.thread div.comment {
+	margin-left: 20px;
+}
+
+div.intro span.title {
+	font-style: italic;
+	font-size: large;
+}
+
+div.intro span.name {
+	font-weight: bold;
+}
+
+form.submit input.submit {
+	position: relative;
+	top: -20px;
+}
+
 footer {
-	position:absolute;
+	position:fixed;
 	bottom: 10px;
 	right: 15px;
 }

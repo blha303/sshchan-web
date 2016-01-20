@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block body %}
-		<span class="boardname">/{{ board }}/</span>
+		<div class="boardname">/{{ board }}/ - <i>{{ desc }}</i></div>
+		{{ getform(board)|safe }}
 {% for num, post in posts.items() %}
 		<div class="thread" id="{{ num }}">
 			<div class="post op">
@@ -27,6 +28,9 @@
 				</div>
 			</div>
 {% endfor %}
+			<div class="comment" id="submit_{{ post.id }}">
+				{{ getform(board, post.id)|safe }}
+			</div>
 		</div>
 {% endfor %}
 {% endblock %}

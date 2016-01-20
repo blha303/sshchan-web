@@ -1,0 +1,9 @@
+<form method=POST action="/{{ board }}/" class="submit">
+	{% if id %}
+	<input type="hidden" name="id" value="{{ id }}">
+	{% endif %}
+	<input class="title" name="title" type="text" placeholder="Title (optional)"><br>
+	<input class="name" name="name" type="text" placeholder="Name (ignored)"><br>
+	<textarea class="body" name="body"></textarea>
+	<input class="submit" type="submit" value="Submit">
+</form>

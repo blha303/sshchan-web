@@ -37,19 +37,28 @@ def get_git_describe():
         return fmt_tagrevhash(*split)
     return tag
 
-def get_board_nav():
-    return " / ".join(['<a href="/{0}/">{0}</a>'.format(board) for board in sorted(BOARDS.keys())])
+def get_board_nav(curboard):
+    boards = []
+    for board in sorted(BOARDS.keys()):
+        if board != curboard:
+            boards.append('<a href="/{0}/">{0}</a>'.format(board))
+        else:
+            boards.append(board)
+    return " / ".join(boards)
+
+def get_form(board, id=None):
+    return render_template("submit.html", board=board, id=id)
 
 app = Flask(__name__)
-app.jinja_env.globals.update(info=get_git_describe, title="Chanweb", boardnav=get_board_nav)
-
-_paragraph_re = re.compile(r'(?:\r\n|\r|\n){2,}')
+with open("/home/blha303/sekritkee") as f:
+    app.secret_key = f.read()
+app.jinja_env.globals.update(info=get_git_describe, title="Chanweb", boardnav=get_board_nav, getform=get_form)
 
 @app.template_filter()
 @evalcontextfilter
 def nl2br(eval_ctx, value):
-    result = u'\n\n'.join(u'<p>%s</p>' % p.replace('\n', '<br>\n') \
-        for p in _paragraph_re.split(escape(value)))
+    result = '\n\n'.join('<p>%s</p>' % p.replace('\n', '<br>\n')
+        for p in re.compile(r'(?:\r\n|\r|\n){2,}').split(escape(value)))
     if eval_ctx.autoescape:
         result = Markup(result)
     return result
@@ -58,13 +67,57 @@ def nl2br(eval_ctx, value):
 def index():
     return render_template("index.html", boards=BOARDS)
 
-@app.route('/<board>/')
+@app.route('/<board>/', methods=["GET", "POST"])
 def board_display(board):
     if board == "favicon.ico":
         return render_template("index.html", boards=BOARDS), 404
     if board in BOARDS:
+        desc = BOARDS[board]
         with open(ROOT + "boards/{}/index".format(board)) as f:
             board_content = load(f)
+    else:
+        return render_template("404.html"), 404
+
+    if request.method == "POST":
+        global POSTS
+        title = request.form["title"] if request.form.get("title", None) else ""
+#        name = request.form["name"] if request.form.get("name", None) else "Anonymous"
+        body = request.form["body"] if request.form.get("body", None) else ""
+        id = request.form["id"] if request.form.get("id", None) else ""
+        if not body:
+            flash("No body provided! We kinda need something there, sorry.", "error")
+            return render_template("posted.html", board=board, desc=desc)
+        if id:
+            if not id.isdigit():
+                flash("Invalid request: ID not numeric", "error")
+                return render_template("posted.html", board=board, desc=desc)
+            changed_something = False
+            for post in board_content:
+                if post[0] == int(id):
+                    post.append([int(datetime.timestamp(datetime.utcnow())),
+                                 POSTS[board] + 1,
+                                 body])
+                    POSTS[board] += 1
+                    changed_something = True
+            if not changed_something:
+                flash("Sorry, couldn't find that top-level post.", "error")
+                return render_template("posted.html", board=board, desc=desc)
+        else:
+            board_content.append([POSTS[board] + 1,
+                                  title,
+                                  [int(datetime.timestamp(datetime.utcnow())),
+                                   POSTS[board] + 1,
+                                   body]
+                                 ])
+            POSTS[board] += 1
+        with open(ROOT + "postnums", "w") as f:
+            dump(POSTS, f)
+        with open(ROOT + "boards/{}/index".format(board), "w") as f:
+            dump(board_content, f)
+        flash("Success! (?)", "success")
+        return render_template("posted.html", board=board, desc=desc)
+           
+
     toplevel = {}
     def fix_time(post):
         post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -89,7 +142,7 @@ def board_display(board):
             comments.append(out)
         toplevel[postnum]["comments"] = comments
         toplevel[postnum]["name"] = "Anonymous"
-    return render_template("board.html", posts=toplevel, board=board)
+    return render_template("board.html", posts=toplevel, board=board, desc=desc)
 
 if __name__ == "__main__":
     app.run(port=56224, debug=True)

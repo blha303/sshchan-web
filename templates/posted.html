@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<meta http-equiv="refresh" content="3;url=/{{ board }}/#{{ id }}" />
 		<link rel="stylesheet" type="text/css" href="/static/style.css" />
 		<title>{{ title }}</title>
 	</head>
@@ -9,7 +10,11 @@
 			<span class="title"><a href="/">{{ title }}</a></span>
 			<span class="boardnav">{{ boardnav(board)|safe }}</span>
 		</div>
-{% block body %}{% endblock %}
+		<div class="messages">
+			{% for category, message in get_flashed_messages(with_categories=true) %}
+			<div class="{{ category }}">{{ message }}</div>
+			{% endfor %}
+		</div>
 		<footer>
 			{{ title }} {{ info()|safe }}
 		</footer>
