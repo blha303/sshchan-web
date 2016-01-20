@@ -15,6 +15,8 @@ def get_git_describe():
         return '<a href="{0}/tree/{1}">{1}</a>'.format(GH_URL, tag)
     def fmt_commit(hash):
         return '<a href="{0}/commit/{1}">{1}</a>'.format(GH_URL, hash)
+    def fmt_tagrevhash(tag, rev, hash):
+        return '<a href="{0}/compare/{1}...{3}">{1}-{2}-{3}</a>'.format(GH_URL, tag, rev, hash)
     if len(split) == 1 and GH_URL:
         if split[0][0] == "v": # tag only
             return fmt_tag(split[0])
@@ -23,7 +25,8 @@ def get_git_describe():
         else: # unknown
             return split[0]
     elif len(split) == 3 and GH_URL: # tag-rev-hash
-        return "-".join([fmt_tag(split[0]), split[1], fmt_commit(split[2][1:])])
+        split[2] = split[2][1:]
+        return fmt_tagrevhash(*split)
     return tag
 
 with open(ROOT + "boardlist") as f:
