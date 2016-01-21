@@ -146,11 +146,14 @@ def board_display(board):
     def fix_time(post):
         post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
         post["ago"] = human(datetime.utcfromtimestamp(post["ts"]), precision=1)
+    def clean_body(body):
+        body = re.sub(r'>>(\d+)\b', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
+        body = clean_html(html(body).strip())
+        return body
     for post in board_content:
         postnum,title,*c = post
         ts,postnum,body = c.pop(0)
-        body = re.sub(r'>>(\d+?)', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
-        body = clean_html(html(body).strip())
+        body = clean_body(body)
         toplevel[postnum] = {}
         toplevel[postnum]["id"] = postnum
         toplevel[postnum]["title"] = title
@@ -159,7 +162,7 @@ def board_display(board):
         fix_time(toplevel[postnum])
         comments = []
         for ts,id,body in c:
-            body = clean_html(html(body).strip())
+            body = clean_body(body)
             out = {}
             out["ts"] = int(ts)
             fix_time(out)
