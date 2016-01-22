@@ -33,4 +33,12 @@
 			</div>
 		</div>
 {% endfor %}
+		<script>
+			var videos = document.getElementsByTagName('video');
+			for (var i=0; i<videos.length; i++) {
+				videos[i].setAttribute("muted", "");
+				videos[i].setAttribute("onmouseover", "this.play()");
+				videos[i].setAttribute("onmouseout", "this.pause()");
+			}
+		</script>
 {% endblock %}

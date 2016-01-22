@@ -1,9 +1,24 @@
-<form method=POST action="/{{ board }}/" class="submit">
-	{% if id %}
-	<input type="hidden" name="id" value="{{ id }}">
+<div class="submit">
+	{% if not id %}
+		{% set id = board %}
 	{% endif %}
-	<input class="title" name="title" type="text" placeholder="Title (optional)"><br>
-	<input class="name" name="name" type="text" placeholder="Name (ignored)"><br>
-	<textarea class="body" name="body"></textarea>
-	<input class="submit" type="submit" value="Submit">
-</form>
+	<span class="fakelink" id="reply_{{ id }}">Reply &gt;&gt;</span>
+	<form method=POST action="/{{ board }}/" id="replyform_{{ id }}">
+		<input type="hidden" name="id" value="{{ id }}">
+		<input class="title" name="title" type="text" placeholder="Title (optional)"><br>
+<!--		<input class="name" name="name" type="text" placeholder="Name (ignored)"><br> -->
+		<textarea class="body" name="body"></textarea>
+		<input class="submit" type="submit" value="Submit">
+		<span class="fakelink" id="back_{{ id }}">Back</span>
+	</form>
+	<script>
+	document.getElementById("reply_{{ id }}").onclick = function(event){
+		this.style.display = "none";
+		document.getElementById("replyform_{{ id }}").style.display = "block";
+	};
+	document.getElementById("back_{{ id }}").onclick = function(event){
+		document.getElementById("reply_{{ id }}").style.display = "inline";
+		document.getElementById("replyform_{{ id }}").style.display = "none";
+	};
+	</script>
+</div>

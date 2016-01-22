@@ -67,5 +67,19 @@ blockquote p {
 }
 
 :target {
-   background-color: #ffa;
+	background-color: #ffa;
+}
+
+div.submit form {
+	display: none;
+}
+
+div.submit span {
+	display: inline;
+}
+
+.fakelink {
+	color: blue;
+	text-decoration: underline;
+	cursor: pointer;
 }
