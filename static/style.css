@@ -65,3 +65,7 @@ blockquote p:before {
 blockquote p {
 	color: green;
 }
+
+:target {
+   background-color: #ffa;
+}

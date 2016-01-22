@@ -147,6 +147,7 @@ def board_display(board):
         post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
         post["ago"] = human(datetime.utcfromtimestamp(post["ts"]), precision=1)
     def clean_body(body):
+        body = re.sub(r'>>>/?([a-zA-Z]{1,5})/(\d+)\b', r'<a class="ref" href="/\1/#\2">&gt;&gt;&gt;/\1/\2</a>', body)
         body = re.sub(r'>>(\d+)\b', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
         body = clean_html(html(body).strip())
         return body
