@@ -31,10 +31,12 @@ div.messages .success {
 }
 
 div.thread {
+	background-color: #D3D3D3;
 	margin-bottom: 40px;
 }
 
 div.thread div.comment {
+	background-color: #B3B3B3;
 	margin-left: 20px;
 }
 
@@ -67,7 +69,7 @@ blockquote p {
 }
 
 :target {
-	background-color: #ffa;
+	background-color: #ffa!important;
 }
 
 div.submit form {
@@ -78,8 +80,12 @@ div.submit span {
 	display: inline;
 }
 
-.fakelink {
+.fakelink, footer {
 	color: blue;
 	text-decoration: underline;
 	cursor: pointer;
+}
+
+footer a:visited {
+	color: blue;
 }

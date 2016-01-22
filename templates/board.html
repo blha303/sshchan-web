@@ -28,17 +28,35 @@
 				</div>
 			</div>
 {% endfor %}
-			<div class="comment" id="submit_{{ post.id }}">
+			<div id="submit_{{ post.id }}">
 				{{ getform(board, post.id)|safe }}
 			</div>
 		</div>
 {% endfor %}
 		<script>
+			document.onload = function() {
+				// So linking to posts works
+				window.location.hash = window.location.hash + " ";
+			}
 			var videos = document.getElementsByTagName('video');
 			for (var i=0; i<videos.length; i++) {
 				videos[i].setAttribute("muted", "");
-				videos[i].setAttribute("onmouseover", "this.play()");
-				videos[i].setAttribute("onmouseout", "this.pause()");
+				videos[i].setAttribute("loop", "");
+//				videos[i].setAttribute("controls", "");
+				meter = document.createElement("meter");
+				meter.style.visibility = "hidden";
+				meter.style.display = "none";
+				meter.max = 1;
+				videos[i].meter = meter;
+				videos[i].setAttribute("onmouseover", "this.play(); videos[" + i + "].meter.style.visibility = \"visible\"; videos[" + i + "].meter.style.display = \"block\";");
+				videos[i].setAttribute("onmouseout", "this.pause(); videos[" + i + "].meter.style.visibility = \"hidden\"; videos[" + i + "].meter.style.display = \"none\";");
+				videos[i].onloadedmetadata = function() {
+					this.meter.style.width = this.offsetWidth + "px";
+				};
+				videos[i].ontimeupdate = function() {
+					this.meter.value = this.currentTime / this.duration;
+				};
+				videos[i].parentNode.insertBefore(meter, videos[i].nextSibling);
 			}
 		</script>
 {% endblock %}

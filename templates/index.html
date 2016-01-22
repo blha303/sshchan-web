@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block body %}
-                <p>Select a board:</p>
-                <ul>
+		<p>Select a board:</p>
+		<ul>
 {% for board, desc in boards.items() %}
-                        <li><a href="/{{ board }}/"><b>{{ board }}</b></a> ({{ desc }})</li>
+			<li><a href="/{{ board }}/"><b>{{ board }}</b></a> ({{ desc }})</li>
 {% endfor %}
-                </ul>
+		</ul>
 		<p>Or maybe you want to make your own? You rebel.</p>
 		<form method=POST action="/">
 			<input class="board" name="board" type="text" placeholder="Board name (1-5 chars, alphabet, unique)" size=40><br>

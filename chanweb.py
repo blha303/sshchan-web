@@ -10,6 +10,7 @@ from misaka import html
 from lxml.html.clean import clean_html
 from os import mkdir
 
+NAME = "Chanweb"
 GH_URL = "https://github.com/blha303/sshchan-web"
 ROOT = "/home/blha303/sshchan/"
 with open(ROOT + "boardlist") as f:
@@ -19,6 +20,7 @@ with open(ROOT + "postnums") as f:
 
 def get_git_describe():
     """ Returns HTML string with current version. If on a tag: "v1.1.1"; if not on a tag or on untagged commit: "v1.1.1-1-abcdefgh" """
+    name = '<a href="{}">{}</a> '.format(GH_URL, NAME)
     tag = check_output(["git", "describe", "--tags", "--always"], cwd=ROOT + ".web").strip().decode('utf-8')
     split = tag.split("-")
     def fmt_tag(tag):
@@ -29,15 +31,15 @@ def get_git_describe():
         return '<a href="{0}/compare/{1}...{3}">{1}-{2}-{3}</a>'.format(GH_URL, tag, rev, hash)
     if len(split) == 1 and GH_URL:
         if split[0][0] == "v": # tag only
-            return fmt_tag(split[0])
+            return name + fmt_tag(split[0])
         elif len(split[0]) == 8: # commit hash
-            return fmt_commit(split[0][1:])
+            return name + fmt_commit(split[0][1:])
         else: # unknown
-            return split[0]
+            return name + split[0]
     elif len(split) == 3 and GH_URL: # tag-rev-hash
         split[2] = split[2][1:]
-        return fmt_tagrevhash(*split)
-    return tag
+        return name + fmt_tagrevhash(*split)
+    return name + tag
 
 def get_board_nav(curboard):
     boards = []
