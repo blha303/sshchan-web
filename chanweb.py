@@ -8,8 +8,10 @@ from datetime import datetime
 from ago import human
 from misaka import html
 from lxml.html.clean import clean_html
-from os import mkdir, getenv, path
+from os import mkdir, getenv
+import os.path
 import logging
+import logging.config
 
 NAME = "Chanweb"
 GH_URL = "https://github.com/blha303/sshchan-web"
@@ -19,19 +21,12 @@ with open(ROOT + "boardlist") as f:
 with open(ROOT + "postnums") as f:
     POSTS = load(f)
 
-def setup_logging(
-    default_path='logging.json', 
-    default_level=logging.INFO,
-    env_key='LOG_CFG'
-):
-    """Setup logging configuration
-
-    """
+def setup_logging(default_path='logging.json', default_level=logging.INFO, env_key='LOG_CFG'):
     path = default_path
     value = getenv(env_key, None)
     if value:
         path = value
-    if path.exists(path):
+    if os.path.exists(path):
         with open(path, 'rt') as f:
             config = load(f)
         logging.config.dictConfig(config)
@@ -74,6 +69,7 @@ def get_form(board, id=None):
     return render_template("submit.html", board=board, id=id)
 
 app = Flask(__name__)
+setup_logging()
 
 with open("/home/blha303/sekritkee") as f:
     app.secret_key = f.read()
@@ -143,10 +139,7 @@ def board_display(board):
         if not body:
             flash("No body provided! We kinda need something there, sorry.", "error")
             return render_template("posted.html", board=board, desc=desc)
-        if id:
-            if not id.isdigit():
-                flash("Invalid request: ID not numeric", "error")
-                return render_template("posted.html", board=board, desc=desc)
+        if id and id.isdigit():
             changed_something = False
             for post in board_content:
                 if post[0] == int(id):
