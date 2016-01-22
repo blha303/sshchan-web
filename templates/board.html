@@ -12,7 +12,7 @@
 					<span class="id"><a href="#{{ post.id }}">>>{{ post.id }}</a></span>
 				</div>
 				<div class="body">
-					{{ post.body|safe }}
+					{{ post.htmlbody|safe }}
 				</div>
 			</div>
 {% for comment in post.comments %}
@@ -24,7 +24,7 @@
 					<span class="id"><a href="#{{ comment.id }}">>>{{ comment.id }}</a></span>
 				</div>
 				<div class="body">
-					{{ comment.body|safe }}
+					{{ comment.htmlbody|safe }}
 				</div>
 			</div>
 {% endfor %}

@@ -68,6 +68,44 @@ def get_board_nav(curboard):
 def get_form(board, id=None):
     return render_template("submit.html", board=board, id=id)
 
+def process_board(board_content):
+    toplevel = {}
+    def fix_time(post):
+        post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+        post["ago"] = human(datetime.utcfromtimestamp(post["ts"]), precision=1)
+    def clean_body(body):
+        # Cross-board links: >>>(/)?boardname/id
+        body = re.sub(r'>>>/?([a-zA-Z]{1,5})/(\d+)\b', r'<a class="ref" href="/\1/#\2">&gt;&gt;&gt;/\1/\2</a>', body)
+        # Same-board links: >>id
+        body = re.sub(r'>>(\d+)\b', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
+        body = clean_html(html(body).strip())
+        return body
+    for post in board_content:
+        postnum,title,*c = post
+        ts,postnum,body = c.pop(0)
+        htmlbody = clean_body(body)
+        toplevel[postnum] = {}
+        toplevel[postnum]["id"] = postnum
+        toplevel[postnum]["title"] = title
+        toplevel[postnum]["body"] = body
+        toplevel[postnum]["htmlbody"] = htmlbody
+        toplevel[postnum]["ts"] = int(ts)
+        fix_time(toplevel[postnum])
+        comments = []
+        for ts,id,body in c:
+            htmlbody = clean_body(body)
+            out = {}
+            out["ts"] = int(ts)
+            fix_time(out)
+            out["id"] = id
+            out["body"] = body
+            out["htmlbody"] = htmlbody
+            out["name"] = "Anonymous"
+            comments.append(out)
+        toplevel[postnum]["comments"] = comments
+        toplevel[postnum]["name"] = "Anonymous"
+    return toplevel
+
 app = Flask(__name__)
 setup_logging()
 
@@ -166,45 +204,33 @@ def board_display(board):
         flash("Success! (?)", "success")
         return render_template("posted.html", board=board, desc=desc, id=POSTS[board])
 
-    toplevel = {}
-    def fix_time(post):
-        post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-        post["ago"] = human(datetime.utcfromtimestamp(post["ts"]), precision=1)
-    def clean_body(body):
-        # Cross-board links: >>>(/)?boardname/id
-        body = re.sub(r'>>>/?([a-zA-Z]{1,5})/(\d+)\b', r'<a class="ref" href="/\1/#\2">&gt;&gt;&gt;/\1/\2</a>', body)
-        # Same-board links: >>id
-        body = re.sub(r'>>(\d+)\b', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
-        body = clean_html(html(body).strip())
-        return body
-    for post in board_content:
-        postnum,title,*c = post
-        ts,postnum,body = c.pop(0)
-        body = clean_body(body)
-        toplevel[postnum] = {}
-        toplevel[postnum]["id"] = postnum
-        toplevel[postnum]["title"] = title
-        toplevel[postnum]["body"] = body
-        toplevel[postnum]["ts"] = int(ts)
-        fix_time(toplevel[postnum])
-        comments = []
-        for ts,id,body in c:
-            body = clean_body(body)
-            out = {}
-            out["ts"] = int(ts)
-            fix_time(out)
-            out["id"] = id
-            out["body"] = body
-            out["name"] = "Anonymous"
-            comments.append(out)
-        toplevel[postnum]["comments"] = comments
-        toplevel[postnum]["name"] = "Anonymous"
+    toplevel = process_board(board_content)
     return render_template("board.html", posts=toplevel, board=board, desc=desc)
 
 @app.route("/.well-known/acme-challenge/sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM")
 def acme():
     logging.info("Got an acme-challenge request")
     return "sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM.--3x4yUIqI4PvD8bAfmTEZ2mwq3YoGv89krhoMNnlGI"
+
+@app.route("/_api/")
+def api_index():
+    return render_template("api.html")
+
+@app.route("/_api/<endpoint>/")
+def api(endpoint):
+    if endpoint == "board":
+        board = request.args.get("board", None)
+        if board:
+            if board in BOARDS:
+                with open(ROOT + "boards/{}/index".format(board)) as f:
+                    board_content = load(f)
+                return jsonify(process_board(board_content))
+            else:
+                return jsonify({"error": 404}), 404
+        else:
+            return jsonify({"error": 400}), 400
+    else:
+        return jsonify({"error": 501}), 501
 
 if __name__ == "__main__":
     app.run(port=56224, debug=True)
