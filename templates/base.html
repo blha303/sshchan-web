@@ -2,6 +2,30 @@
 <html>
 	<head>
 		<link rel="stylesheet" type="text/css" href="/static/style.css" />
+		{% block meta %}{% endblock %}
+		<meta name="viewport" content="width=device-width" />
+		<script type="text/javascript">
+		(function(doc) {
+		
+		    var addEvent = 'addEventListener',
+		        type = 'gesturestart',
+		        qsa = 'querySelectorAll',
+		        scales = [1, 1],
+		        meta = qsa in doc ? doc[qsa]('meta[name=viewport]') : [];
+		
+		    function fix() {
+		        meta.content = 'width=device-width,minimum-scale=' + scales[0] + ',maximum-scale=' + scales[1];
+		        doc.removeEventListener(type, fix, true);
+		    }
+		
+		    if ((meta = meta[meta.length - 1]) && addEvent in doc) {
+		        fix();
+		        scales = [.25, 1.6];
+		        doc[addEvent](type, fix, true);
+		    }
+		
+		}(document));
+		</script>
 		<title>{{ title }}</title>
 	</head>
 	<body>

@@ -89,3 +89,7 @@ div.submit span {
 footer a:visited {
 	color: blue;
 }
+
+video {
+	max-width: 480px;
+}

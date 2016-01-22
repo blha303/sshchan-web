@@ -8,7 +8,8 @@ from datetime import datetime
 from ago import human
 from misaka import html
 from lxml.html.clean import clean_html
-from os import mkdir
+from os import mkdir, getenv, path
+import logging
 
 NAME = "Chanweb"
 GH_URL = "https://github.com/blha303/sshchan-web"
@@ -17,6 +18,25 @@ with open(ROOT + "boardlist") as f:
     BOARDS = load(f)
 with open(ROOT + "postnums") as f:
     POSTS = load(f)
+
+def setup_logging(
+    default_path='logging.json', 
+    default_level=logging.INFO,
+    env_key='LOG_CFG'
+):
+    """Setup logging configuration
+
+    """
+    path = default_path
+    value = getenv(env_key, None)
+    if value:
+        path = value
+    if path.exists(path):
+        with open(path, 'rt') as f:
+            config = load(f)
+        logging.config.dictConfig(config)
+    else:
+        logging.basicConfig(level=default_level)
 
 def get_git_describe():
     """ Returns HTML string with current version. If on a tag: "v1.1.1"; if not on a tag or on untagged commit: "v1.1.1-1-abcdefgh" """
@@ -58,6 +78,7 @@ app = Flask(__name__)
 with open("/home/blha303/sekritkee") as f:
     app.secret_key = f.read()
 app.jinja_env.globals.update(info=get_git_describe, title="Chanweb", boardnav=get_board_nav, getform=get_form)
+logging.debug("Imports done, flask loaded")
 
 @app.route('/', methods=["GET", "POST"])
 def index():
@@ -66,16 +87,20 @@ def index():
         global POSTS
         board = request.form["board"].lower() if request.form.get("board", None) else ""
         desc = request.form["desc"] if request.form.get("desc", None) else ""
-        if not board or not board.isalpha() or len(board) > 6 or board in BOARDS:
-            flash("Invalid board name! (alphabet, 1-5 characters, unique)", "error")
-            return render_template("newboard.html", board=board)
-        if not desc or not all(x.isalpha() or x.isspace() for x in desc) or len(desc) > 30:
-            flash("Invalid description! (alphanumerical, 1-30 chars)", "error")
+        badboard = not board or not board.isalpha() or len(board) > 6 or board in BOARDS
+        baddesc = not desc or not all(x.isalpha() or x.isspace() for x in desc) or len(desc) > 30
+        if badboard or baddesc:
+            if badboard:
+                flash("Invalid board name! (alphabet, 1-5 characters, unique)", "error")
+            if baddesc:
+                flash("Invalid description! (alphanumerical, 1-30 chars)", "error")
+            logging.debug("Someone tried to create an invalid board: {} ({})".format(board, desc))
             return render_template("newboard.html", board=board)
         try:
             mkdir(ROOT + "boards/" + board)
         except IOError:
             flash("Unable to create board :O", "error")
+            logging.exception("User was unable to create board")
             return render_template("newboard.html", board=board)
         with open(ROOT + "boardlist", "w") as f:
             BOARDS[board] = desc
@@ -86,13 +111,17 @@ def index():
             POSTS[board] = 0
             dump(POSTS, f)
         flash("Success? :O", "success")
+        logging.info("New board created: " + board)
         return render_template("newboard.html", board=board)
     return render_template("index.html", boards=BOARDS)
 
 @app.route('/<board>/', methods=["GET", "POST"])
 def board_display(board):
+    global BOARDS
     if board == "favicon.ico":
         return render_template("index.html", boards=BOARDS), 404
+    with open(ROOT + "boardlist") as f:
+        BOARDS = load(f)
     if board in BOARDS:
         desc = BOARDS[board]
         with open(ROOT + "boards/{}/index".format(board)) as f:
@@ -149,7 +178,9 @@ def board_display(board):
         post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
         post["ago"] = human(datetime.utcfromtimestamp(post["ts"]), precision=1)
     def clean_body(body):
+        # Cross-board links: >>>(/)?boardname/id
         body = re.sub(r'>>>/?([a-zA-Z]{1,5})/(\d+)\b', r'<a class="ref" href="/\1/#\2">&gt;&gt;&gt;/\1/\2</a>', body)
+        # Same-board links: >>id
         body = re.sub(r'>>(\d+)\b', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
         body = clean_html(html(body).strip())
         return body
@@ -179,6 +210,7 @@ def board_display(board):
 
 @app.route("/.well-known/acme-challenge/sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM")
 def acme():
+    logging.info("Got an acme-challenge request")
     return "sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM.--3x4yUIqI4PvD8bAfmTEZ2mwq3YoGv89krhoMNnlGI"
 
 if __name__ == "__main__":
