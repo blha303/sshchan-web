@@ -252,37 +252,41 @@ def acme():
 
 # http://flask.pocoo.org/snippets/45/
 def request_wants_json():
-    best = request.accept_mimetypes \
-        .best_match(['application/json', 'text/html'])
-    return best == 'application/json' and \
-        request.accept_mimetypes[best] > \
-        request.accept_mimetypes['text/html']
-
-@app.route("/_api/")
-def api_index():
-    endpoints = {k[13:]: __builtins__.globals()[k].__doc__ for k in __builtins__.globals() if "api_endpoint_" in k}
-    if request_wants_json():
-        return jsonify(endpoints)
-    return render_template("api.html", endpoints=endpoints)
-
-@app.route("/_api/<endpoint>/<data>")
-def api(endpoint, data):
-    if "api_endpoint_" + endpoint in __builtins__.globals():
-        return __builtins__.globals()["api_endpoint_" + endpoint](data)
-    return jsonify({"error": 501}), 501
+    best = request.accept_mimetypes.best_match(['application/json', 'text/html'])
+    return request.args.get("json", False) or \
+        (best == 'application/json' and
+         request.accept_mimetypes[best] > request.accept_mimetypes['text/html'])
 
 def api_endpoint_board(data):
     """/_api/board/{board} - Returns board contents. Currently does not allow POSTing (although /board/ accepts POSTs, but will return html). Send ?id=n to get #n (toplevel posts only)."""
-    if not data and not invalid_board_name(data): return jsonify({"error": 400}), 400
-    if not data in BOARDS: return jsonify({"error": 404}), 404
+    def error(code):
+        """code: int http status code to return"""
+        return jsonify({"error": code, "doc": api_endpoint_board.__doc__}), code
+    if not data and not invalid_board_name(data): return error(400)
+    if not data in BOARDS: return error(404)
     with open(ROOT + "boards/{}/index".format(data)) as f:
         board_content = process_board(load(f))
     postnum = request.args.get("id", None)
     if postnum:
         if not postnum.isdigit() or not int(postnum) in board_content:
-            return jsonify({"error": 404}), 404
+            return error(404)
         return jsonify(board_content[int(postnum)])
     return jsonify(board_content)
+
+endpoints = {'board': api_endpoint_board}
+
+@app.route("/_api/")
+def api_index():
+    ep = {k: v.__doc__ for k,v in endpoints.items()}
+    if request_wants_json():
+        return jsonify(ep)
+    return render_template("api.html", endpoints=ep)
+
+@app.route("/_api/<endpoint>/<data>")
+def api(endpoint, data):
+    if endpoint in endpoints:
+        return endpoints[endpoint](data)
+    return jsonify({"error": 501, "doc": {k: v.__doc__ for k,v in endpoints.items()}}), 501
 
 if __name__ == "__main__":
     app.run(port=56224, debug=True)
