@@ -9,12 +9,18 @@
 <!--		<input class="name" name="name" type="text" placeholder="Name (ignored)"><br> -->
 		<textarea class="body" name="body"></textarea>
 		<input class="submit" type="submit" value="Submit">
-		<span class="fakelink" id="back_{{ id }}">Back</span>
+		<span class="fakelink" id="back_{{ id }}">Back</span><br>
+		<div class="g-recaptcha" id="recaptcha_{{ id }}"></div>
 	</form>
 	<script>
 	document.getElementById("reply_{{ id }}").onclick = function(event){
 		this.style.display = "none";
-		document.getElementById("replyform_{{ id }}").style.display = "block";
+		form = document.getElementById("replyform_{{ id }}");
+//		recaptcha = document.createElement("div");
+//		recaptcha.setAttribute("class", "g-recaptcha");
+//		recaptcha.setAttribute("data-sitekey", "6LflIhYTAAAAAMjviNtwSFDrHuOVIHvCQIOpDDg6");
+//		form.appendChild(recaptcha);
+		form.style.display = "block";
 	};
 	document.getElementById("back_{{ id }}").onclick = function(event){
 		document.getElementById("reply_{{ id }}").style.display = "inline";

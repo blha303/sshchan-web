@@ -2,6 +2,7 @@
 
 import re
 from flask import *
+from requests import post as req_post
 from json import load, dump
 from subprocess import check_output
 from datetime import datetime
@@ -57,6 +58,7 @@ def get_git_describe():
     return name + tag
 
 def get_board_nav(curboard):
+    """Convenience function, passed into jinja"""
     boards = []
     for board in sorted(BOARDS.keys()):
         if board != curboard:
@@ -66,16 +68,18 @@ def get_board_nav(curboard):
     return " / ".join(boards)
 
 def get_form(board, id=None):
+    """Convenience function, passed into jinja"""
     return render_template("submit.html", board=board, id=id)
 
 def process_board(board_content):
+    """Processes sshchan-format data and returns a dict"""
     toplevel = {}
     def fix_time(post):
         post["time"] = datetime.utcfromtimestamp(post["ts"]).strftime("%Y-%m-%dT%H:%M:%SZ")
         post["ago"] = human(datetime.utcfromtimestamp(post["ts"]), precision=1)
     def clean_body(body):
         # Cross-board links: >>>(/)?boardname/id
-        body = re.sub(r'>>>/?([a-zA-Z]{1,5})/(\d+)\b', r'<a class="ref" href="/\1/#\2">&gt;&gt;&gt;/\1/\2</a>', body)
+        body = re.sub(r'>>>/?([a-zA-Z]{1,6})/(\d+)\b', r'<a class="ref" href="/\1/#\2">&gt;&gt;&gt;/\1/\2</a>', body)
         # Same-board links: >>id
         body = re.sub(r'>>(\d+)\b', r'<a class="ref" href="#\1">&gt;&gt;\1</a>', body)
         body = clean_html(html(body).strip())
@@ -114,6 +118,19 @@ with open("/home/blha303/sekritkee") as f:
 app.jinja_env.globals.update(info=get_git_describe, title="Chanweb", boardnav=get_board_nav, getform=get_form)
 logging.debug("Imports done, flask loaded")
 
+def invalid_board_name(board, desc=False):
+    """Checks if a string meets our stringent standards.
+    if desc = False, return True if string only contains characters in:
+        ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+    if desc = True, same as above, but characters in:
+        0123456789 .,'!/?
+    are also allowed. """
+    board_allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    desc_allowed = board_allowed + "0123456789 .,'!/?"
+    if desc:
+        return not board or not all((x in desc_allowed) for x in board) or len(board) > 30
+    return not board or not board.isalpha() or not all((x in board_allowed) for x in board) or len(board) > 6 or board in BOARDS
+
 @app.route('/', methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -121,13 +138,14 @@ def index():
         global POSTS
         board = request.form["board"].lower() if request.form.get("board", None) else ""
         desc = request.form["desc"] if request.form.get("desc", None) else ""
-        badboard = not board or not board.isalpha() or len(board) > 6 or board in BOARDS
-        baddesc = not desc or not all(x.isalpha() or x.isspace() for x in desc) or len(desc) > 30
-        if badboard or baddesc:
-            if badboard:
-                flash("Invalid board name! (alphabet, 1-5 characters, unique)", "error")
-            if baddesc:
-                flash("Invalid description! (alphanumerical, 1-30 chars)", "error")
+        if board in BOARDS:
+            flash("That board already exists!", "error")
+            return render_template("newboard.html", board=board)
+        if invalid_board_name(board) or invalid_board_name(desc, desc=True):
+            if invalid_board_name(board):
+                flash("Invalid board name! (alphabet, 1-6 characters, unique)", "error")
+            if invalid_board_name(desc, desc=True):
+                flash("Invalid description! (alphanumeripunctual, 1-30 chars)", "error")
             logging.debug("Someone tried to create an invalid board: {} ({})".format(board, desc))
             return render_template("newboard.html", board=board)
         try:
@@ -140,9 +158,9 @@ def index():
             BOARDS[board] = desc
             dump(BOARDS, f)
         with open(ROOT + "boards/" + board + "/index", "w") as f:
-            dump([], f)
+            dump([[1, "GET", [int(datetime.timestamp(datetime.utcnow())), 1, "first"]]], f)
         with open(ROOT + "postnums", "w") as f:
-            POSTS[board] = 0
+            POSTS[board] = 1
             dump(POSTS, f)
         flash("Success? :O", "success")
         logging.info("New board created: " + board)
@@ -153,7 +171,7 @@ def index():
 def board_display(board):
     global BOARDS
     if board == "favicon.ico":
-        return render_template("index.html", boards=BOARDS), 404
+        return render_template("404.html"), 404
     with open(ROOT + "boardlist") as f:
         BOARDS = load(f)
     if board in BOARDS:
@@ -168,6 +186,24 @@ def board_display(board):
         title = request.form["title"] if request.form.get("title", None) else ""
         name = "Anonymous"
         body = request.form["body"] if request.form.get("body", None) else ""
+        ip = request.headers.get("X-Forwarded-For", None)
+        logging.info(ip)
+        if not request.form.get("g-recaptcha-response", None):
+            flash("You'll need to do something with the captcha please.", "error")
+            return render_template("posted.html", board=board, desc=desc)
+        try:
+            with open("/home/blha303/recaptchakey") as f:
+                captcha_resp = req_post("https://www.google.com/recaptcha/api/siteverify", data={"secret": f.read().strip(), "response": request.form.get("g-recaptcha-response"), "remoteip": ip}).json()
+            if not captcha_resp["success"]:
+                flash("Your captcha wasn't up to par. Want to try again? (You'll have to retype your message, sorry.)", "error")
+                return render_template("posted.html", board=board, desc=desc)
+        except:
+            logging.exception("Error with captcha")
+            flash("Sorry, there was a problem while processing the captcha. Please <a href='https://twitter.com/blha303'>let me know</a>.", "error")
+            return render_template("posted.html", board=board, desc=desc)
+        if '<div ' in body:
+            flash("Hi there. Sorry to rain on your parade, but I can't let you do that. Soz.", "error")
+            return render_template("posted.html", board=board, desc=desc)
         if clean_html(html(body).strip()) == "<div></div>":
             body = ""
         id = request.form["id"] if request.form.get("id", None) else ""
@@ -177,26 +213,28 @@ def board_display(board):
         if not body:
             flash("No body provided! We kinda need something there, sorry.", "error")
             return render_template("posted.html", board=board, desc=desc)
+        if not board in POSTS:
+            POSTS[board] = 1
         if id and id.isdigit():
             changed_something = False
             for post in board_content:
                 if post[0] == int(id):
+                    POSTS[board] += 1
                     post.append([int(datetime.timestamp(datetime.utcnow())),
                                  POSTS[board] + 1,
                                  body])
-                    POSTS[board] += 1
                     changed_something = True
             if not changed_something:
                 flash("Sorry, couldn't find that top-level post.", "error")
                 return render_template("posted.html", board=board, desc=desc)
         else:
+            POSTS[board] += 1
             board_content.append([POSTS[board] + 1,
                                   title,
                                   [int(datetime.timestamp(datetime.utcnow())),
                                    POSTS[board] + 1,
                                    body]
                                  ])
-            POSTS[board] += 1
         with open(ROOT + "postnums", "w") as f:
             dump(POSTS, f)
         with open(ROOT + "boards/{}/index".format(board), "w") as f:
@@ -212,25 +250,39 @@ def acme():
     logging.info("Got an acme-challenge request")
     return "sKcvRiSjHFjRq6OvM1TXyotTxH08qN263Tp-cVPdkgM.--3x4yUIqI4PvD8bAfmTEZ2mwq3YoGv89krhoMNnlGI"
 
+# http://flask.pocoo.org/snippets/45/
+def request_wants_json():
+    best = request.accept_mimetypes \
+        .best_match(['application/json', 'text/html'])
+    return best == 'application/json' and \
+        request.accept_mimetypes[best] > \
+        request.accept_mimetypes['text/html']
+
 @app.route("/_api/")
 def api_index():
-    return render_template("api.html")
+    endpoints = {k[13:]: __builtins__.globals()[k].__doc__ for k in __builtins__.globals() if "api_endpoint_" in k}
+    if request_wants_json():
+        return jsonify(endpoints)
+    return render_template("api.html", endpoints=endpoints)
 
-@app.route("/_api/<endpoint>/")
-def api(endpoint):
-    if endpoint == "board":
-        board = request.args.get("board", None)
-        if board:
-            if board in BOARDS:
-                with open(ROOT + "boards/{}/index".format(board)) as f:
-                    board_content = load(f)
-                return jsonify(process_board(board_content))
-            else:
-                return jsonify({"error": 404}), 404
-        else:
-            return jsonify({"error": 400}), 400
-    else:
-        return jsonify({"error": 501}), 501
+@app.route("/_api/<endpoint>/<data>")
+def api(endpoint, data):
+    if "api_endpoint_" + endpoint in __builtins__.globals():
+        return __builtins__.globals()["api_endpoint_" + endpoint](data)
+    return jsonify({"error": 501}), 501
+
+def api_endpoint_board(data):
+    """/_api/board/{board} - Returns board contents. Currently does not allow POSTing (although /board/ accepts POSTs, but will return html). Send ?id=n to get #n (toplevel posts only)."""
+    if not data and not invalid_board_name(data): return jsonify({"error": 400}), 400
+    if not data in BOARDS: return jsonify({"error": 404}), 404
+    with open(ROOT + "boards/{}/index".format(data)) as f:
+        board_content = process_board(load(f))
+    postnum = request.args.get("id", None)
+    if postnum:
+        if not postnum.isdigit() or not int(postnum) in board_content:
+            return jsonify({"error": 404}), 404
+        return jsonify(board_content[int(postnum)])
+    return jsonify(board_content)
 
 if __name__ == "__main__":
     app.run(port=56224, debug=True)

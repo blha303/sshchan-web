@@ -12,6 +12,10 @@ div.header span.title a:link {
 	text-decoration: none!important;
 }
 
+div.header span.title a:visited {
+	color: blue;
+}
+
 div.header span.boardnav {
 	margin-left: 10px;
 }
@@ -90,6 +94,7 @@ footer a:visited {
 	color: blue;
 }
 
-video {
+img, video {
 	max-width: 480px;
+	max-height: 640px;
 }

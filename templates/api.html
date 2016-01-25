@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="api">
+	<span class="title">API Documentation</span>
+	<div class="apidocs"><code>
+{% for endpoint, docstring in endpoints.items() %}
+{{ docstring }}
+{% endfor %}
+	</code></div>
+</div>
+{% endblock %}

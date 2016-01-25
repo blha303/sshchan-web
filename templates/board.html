@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block meta %}
+		<script src="//www.google.com/recaptcha/api.js?onload=CaptchaCallback&render=explicit" async defer></script>
+{% endblock %}
 {% block body %}
 		<div class="boardname">/{{ board }}/ - <i>{{ desc }}</i></div>
 		{{ getform(board)|safe }}
@@ -34,6 +37,13 @@
 		</div>
 {% endfor %}
 		<script>
+			var CaptchaCallback = function(){
+				captchas = document.getElementsByClassName("g-recaptcha");
+				sitekey = "6LflIhYTAAAAAMjviNtwSFDrHuOVIHvCQIOpDDg6";
+				for (var i = 0; i < captchas.length; i++) {
+					grecaptcha.render(captchas[i].id, {'sitekey': sitekey});
+				}
+			};
 			document.onload = function() {
 				// So linking to posts works
 				window.location.hash = window.location.hash + " ";

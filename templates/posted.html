@@ -5,7 +5,7 @@
 {% block body %}
 		<div class="messages">
 			{% for category, message in get_flashed_messages(with_categories=true) %}
-			<div class="{{ category }}">{{ message }}</div>
+			<div class="{{ category }}">{{ message|safe }}</div>
 			{% endfor %}
 		</div>
 {% endblock %}
